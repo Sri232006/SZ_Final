@@ -28,7 +28,7 @@ const User = sequelize.define('User', {
     allowNull: false,
     unique: true,
     validate: {
-      is: /^[0-9]{10}$/,
+      len: /^[0-9]{10}$/,
     },
   },
   password: {

@@ -41,7 +41,6 @@ export default function Navbar() {
     { href: '/admin/settings', label: 'Settings' }
   ] : navLinks;
   
-  // Reactively track cart quantity for the bubble
   const cartItems = useCartStore((s) => s.items);
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -77,7 +76,7 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
               <Image
-                src="/images/southzone_logo_final.jpg"
+                src="/images/LOGO.png"
                 alt="SouthZone"
                 width={140}
                 height={42}
@@ -86,7 +85,7 @@ export default function Navbar() {
               />
             </Link>
 
-            {/* Desktop Nav */}
+            {/* Desktop Nav - Times New Roman font */}
             <nav className="hidden lg:flex items-center gap-1">
               {currentNavLinks.map((link) => (
                 <div
@@ -98,6 +97,7 @@ export default function Navbar() {
                   <Link
                     href={link.href}
                     className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                    style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                   >
                     {link.label}
                     {(link as any).children && <ChevronDown className="w-3.5 h-3.5" />}
@@ -118,6 +118,7 @@ export default function Navbar() {
                             key={child.label}
                             href={child.href}
                             className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                           >
                             {child.label}
                           </Link>
@@ -154,7 +155,7 @@ export default function Navbar() {
                 <AnimatePresence>
                   {totalItemsCount > 0 && (
                     <motion.span
-                      key={totalItemsCount} // re-animate bump on change
+                      key={totalItemsCount}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
@@ -177,29 +178,29 @@ export default function Navbar() {
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setProfileOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55]" />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-surface border border-white/10 shadow-2xl p-2 z-[60] origin-top-right">
                           <div className="px-4 py-2 border-b border-white/5 mb-2">
-                            <p className="text-xs text-white/40">Signed in as</p>
-                            <p className="text-sm font-semibold text-white truncate">{user.name || user.email}</p>
+                            <p className="text-xs text-white/40" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>Signed in as</p>
+                            <p className="text-sm font-semibold text-white truncate" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>{user.name || user.email}</p>
                           </div>
                           {user.role === 'admin' ? (
                             <>
-                              <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm font-medium text-accent hover:bg-white/5 rounded-lg transition-colors">
+                              <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm font-medium text-accent hover:bg-white/5 rounded-lg transition-colors" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
                                 Admin Dashboard
                               </Link>
-                              <Link href="/admin/settings" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                              <Link href="/admin/settings" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
                                 Account Settings
                               </Link>
                             </>
                           ) : (
                             <>
-                              <Link href="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                              <Link href="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
                                 My Profile
                               </Link>
-                              <Link href="/orders" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                              <Link href="/orders" onClick={() => setProfileOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
                                 My Orders
                               </Link>
                             </>
                           )}
-                          <button onClick={() => { setProfileOpen(false); useAuthStore.getState().logout(); }} className="w-full mt-2 text-left px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors font-medium">
+                          <button onClick={() => { setProfileOpen(false); useAuthStore.getState().logout(); }} className="w-full mt-2 text-left px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors font-medium" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
                             Sign Out
                           </button>
                         </motion.div>
@@ -237,6 +238,7 @@ export default function Navbar() {
                     placeholder="Search for hoodies, shirts, pants..."
                     autoFocus
                     className="w-full rounded-full bg-white/5 border border-white/10 py-3 pl-12 pr-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                    style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                   />
                   <button onClick={() => setSearchOpen(false)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white">
                     <X className="w-4 h-4" />
@@ -292,6 +294,7 @@ export default function Navbar() {
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center gap-2 px-4 py-3 text-base font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                      style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                     >
                       {link.label}
                     </Link>
@@ -303,6 +306,7 @@ export default function Navbar() {
                             href={child.href}
                             onClick={() => setMobileOpen(false)}
                             className="block px-4 py-2.5 text-sm text-white/50 hover:text-white transition-colors"
+                            style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                           >
                             {child.label}
                           </Link>
@@ -318,6 +322,7 @@ export default function Navbar() {
                   href="/wishlist"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+                  style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                 >
                   <Heart className="w-5 h-5" /> Wishlist
                 </Link>
@@ -325,6 +330,7 @@ export default function Navbar() {
                   href={user ? (user.role === 'admin' ? '/admin' : '/profile') : '/auth/login'}
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+                  style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
                 >
                   <User className="w-5 h-5" /> {user ? 'Profile' : 'Login'}
                 </Link>

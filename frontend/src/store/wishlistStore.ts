@@ -1,13 +1,31 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { WishlistItem } from '@/types';
 import { wishlistAPI } from '@/lib/api';
+
+export interface WishlistItem {
+  id: string;
+  productId: string;
+  userId: string;
+  notes?: string;
+  priority?: 'low' | 'medium' | 'high';
+  reminderPrice?: number;
+  isReminderActive?: boolean;
+  createdAt: string;
+  product?: {
+    id: string;
+    name: string;
+    price: number;
+    discountPrice?: number;
+    stock: number;
+    images?: { url: string; isPrimary: boolean }[];
+  };
+}
 
 interface WishlistState {
   items: WishlistItem[];
   isLoading: boolean;
   fetchWishlist: () => Promise<void>;
-  addItem: (productId: string) => Promise<void>;
+  addItem: (productId: string) => Promise<boolean>;
   removeItem: (id: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
 }
@@ -22,16 +40,24 @@ export const useWishlistStore = create<WishlistState>()(
         set({ isLoading: true });
         try {
           const { data } = await wishlistAPI.getAll();
-          const payload = data.data;
-          set({ items: payload?.wishlist || (Array.isArray(payload) ? payload : []), isLoading: false });
-        } catch {
-          set({ isLoading: false });
+          const wishlistData = data?.data || data;
+          const items = Array.isArray(wishlistData) ? wishlistData : [];
+          set({ items, isLoading: false });
+        } catch (error) {
+          console.error('Fetch wishlist error:', error);
+          set({ items: [], isLoading: false });
         }
       },
 
       addItem: async (productId) => {
-        await wishlistAPI.add(productId);
-        await get().fetchWishlist();
+        try {
+          await wishlistAPI.add(productId);
+          await get().fetchWishlist();
+          return true;
+        } catch (error: any) {
+          console.error('Add to wishlist error:', error);
+          return false;
+        }
       },
 
       removeItem: async (id) => {
@@ -40,13 +66,16 @@ export const useWishlistStore = create<WishlistState>()(
         try {
           await wishlistAPI.remove(id);
           await get().fetchWishlist();
-        } catch {
+        } catch (error) {
+          console.error('Remove from wishlist error:', error);
           await get().fetchWishlist();
+          throw error;
         }
       },
 
-      isInWishlist: (productId) =>
-        get().items.some((item) => item.productId === productId),
+      isInWishlist: (productId) => {
+        return get().items.some((item) => item.productId === productId);
+      },
     }),
     {
       name: 'sz_wishlist',

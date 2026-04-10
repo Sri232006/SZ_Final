@@ -10,14 +10,13 @@ router.use(protect);
 router.get('/', wishlistController.getWishlist);
 router.get('/count', wishlistController.getWishlistCount);
 router.delete('/clear', wishlistController.clearWishlist);
-router.get('/price-drops', wishlistController.checkPriceDrops);
 
-// Item specific routes
+// Product specific routes
 router.post('/product/:productId', wishlistController.addToWishlist);
 router.get('/product/:productId/status', wishlistController.checkWishlistStatus);
-router.patch('/item/:id', wishlistController.updateWishlistItem);
+
+// Item specific routes
 router.delete('/item/:id', wishlistController.removeFromWishlist);
 router.post('/item/:id/move-to-cart', wishlistController.moveToCart);
-router.post('/share/:id', wishlistController.shareWishlist);
 
 module.exports = router;

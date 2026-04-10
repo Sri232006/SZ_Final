@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SouthZone | Premium Streetwear & Fashion",
+  title: "Southzone | Premium Streetwear & Fashion",
   description:
     "Discover premium streetwear, hoodies, shirts, and traditional fashion at SouthZone. Elevate your style with curated collections for the youth.",
   keywords: "streetwear, fashion, hoodies, shirts, clothing, SouthZone",

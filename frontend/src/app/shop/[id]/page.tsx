@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Star, Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, ShieldCheck, RefreshCcw } from 'lucide-react';
+import { Star, Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, ShieldCheck, RefreshCcw, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { productAPI } from '@/lib/api';
+import { productAPI, cartAPI } from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
@@ -16,16 +16,18 @@ import { useAuthStore } from '@/store/authStore';
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const router = useRouter();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const { addItem, openCart } = useCartStore();
-  const { addItem: addWishlist, removeItem: removeWishlist, isInWishlist } = useWishlistStore();
+  const { addItem, openCart, fetchCart } = useCartStore();
+  const { addItem: addWishlist, removeItem: removeWishlist, isInWishlist, fetchWishlist } = useWishlistStore();
   const { token } = useAuthStore();
 
   useEffect(() => {
@@ -33,48 +35,95 @@ export default function ProductDetail() {
       try {
         const { data } = await productAPI.getById(id as string);
         setProduct(data.data);
+        // Set default selections
+        if (data.data.colors?.length) setSelectedColor(data.data.colors[0]);
+        if (data.data.sizes?.length) setSelectedSize(data.data.sizes[0]);
       } catch {
         toast.error('Product not found');
       }
       setLoading(false);
     }
     if (id) fetchProduct();
-  }, [id]);
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>;
-  if (!product) return <div className="min-h-screen flex items-center justify-center text-white/50">Product not found</div>;
-
-  const images = product.images?.map((img: any) => img.url || img.imageUrl) || ['/images/hero2.jpg'];
-  const sizes = product.sizes || ['S', 'M', 'L', 'XL', 'XXL'];
-  
-  // Handle colors natively parsing commas
-  let colors = [{ name: 'Default', value: '#888' }];
-  if (product.color && typeof product.color === 'string') {
-    colors = product.color.split(',').map((c: string) => ({ name: c.trim(), value: c.trim().toLowerCase() }));
-  } else if (Array.isArray(product.color)) {
-    colors = product.color.map((c: string) => ({ name: c, value: c.toLowerCase() }));
-  } else if (product.colors) {
-    colors = product.colors;
-  }
-  
-  const reviews = product.reviews || [];
-  const discountPrice = product.discountPrice || product.salePrice;
-  const inWishlist = isInWishlist(product.id?.toString());
+    if (token) {
+      fetchCart();
+      fetchWishlist();
+    }
+  }, [id, token, fetchCart, fetchWishlist]);
 
   const handleAddToCart = async () => {
-    if (!token) { toast.error('Please login first'); return; }
+    if (!token) { toast.error('Please login first'); router.push('/auth/login'); return; }
     if (!selectedSize) { toast.error('Please select a size'); return; }
+    setIsAdding(true);
     try {
-      await addItem({ productId: product.id.toString(), quantity, size: selectedSize, color: selectedColor || colors[0]?.name || 'Default' });
+      await addItem({ 
+        productId: product.id.toString(), 
+        quantity, 
+        size: selectedSize, 
+        color: selectedColor || colors[0]?.name || 'Default' 
+      });
       toast.success('Added to cart!');
       openCart();
-    } catch {
-      toast.error('Failed to add to cart');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to add to cart');
+    } finally {
+      setIsAdding(false);
     }
   };
 
+ const handleBuyNow = async () => {
+  if (!token) { 
+    toast.error('Please login first'); 
+    router.push('/auth/login'); 
+    return; 
+  }
+  if (!selectedSize) { 
+    toast.error('Please select a size'); 
+    return; 
+  }
+  
+  setIsAdding(true);
+  try {
+    const priceValue = Number(discountPrice || product.price);
+    
+    const directItem = {
+      productId: product.id.toString(),
+      quantity: quantity,
+      size: selectedSize,
+      color: selectedColor || (colors[0]?.name || 'Default'),
+      productName: product.name,
+      price: priceValue,
+      image: images[0]
+    };
+    
+    console.log('Saving to localStorage:', directItem);
+    
+    // Store in localStorage
+    localStorage.setItem('directBuyItem', JSON.stringify(directItem));
+    
+    // Verify it was saved
+    const checkSaved = localStorage.getItem('directBuyItem');
+    console.log('Verification - saved item:', checkSaved);
+    
+    if (!checkSaved) {
+      console.error('Failed to save to localStorage');
+      toast.error('Failed to process');
+      return;
+    }
+    
+    // Small delay to ensure storage is written
+    setTimeout(() => {
+      router.push('/checkout');
+    }, 100);
+    
+  } catch (err: any) {
+    console.error('Buy Now error:', err);
+    toast.error(err.response?.data?.message || 'Failed to process');
+  } finally {
+    setIsAdding(false);
+  }
+};
   const toggleWishlist = async () => {
-    if (!token) { toast.error('Please login first'); return; }
+    if (!token) { toast.error('Please login first'); router.push('/auth/login'); return; }
     try {
       if (inWishlist) {
         await removeWishlist(product.id.toString());
@@ -95,13 +144,31 @@ export default function ProductDetail() {
       await productAPI.addReview(id as string, { rating: reviewRating, comment: reviewText });
       toast.success('Review submitted!');
       setReviewText('');
-      // Refresh product to show new review
       const { data } = await productAPI.getById(id as string);
       setProduct(data.data);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to submit review');
     }
   };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>;
+  if (!product) return <div className="min-h-screen flex items-center justify-center text-white/50">Product not found</div>;
+
+  const images = product.images?.map((img: any) => img.url || img.imageUrl) || ['/images/hero2.jpg'];
+  const sizes = product.sizes || ['S', 'M', 'L', 'XL', 'XXL'];
+  
+  let colors = [{ name: 'Default', value: '#888' }];
+  if (product.color && typeof product.color === 'string') {
+    colors = product.color.split(',').map((c: string) => ({ name: c.trim(), value: c.trim().toLowerCase() }));
+  } else if (Array.isArray(product.color)) {
+    colors = product.color.map((c: string) => ({ name: c, value: c.toLowerCase() }));
+  } else if (product.colors) {
+    colors = product.colors;
+  }
+  
+  const reviews = product.reviews || [];
+  const discountPrice = product.discountPrice || product.salePrice;
+  const inWishlist = isInWishlist(product.id?.toString());
 
   return (
     <div className="min-h-screen pt-24 lg:pt-28 pb-24">
@@ -112,6 +179,7 @@ export default function ProductDetail() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
+          {/* Left Column - Images */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="flex justify-center lg:justify-end lg:pr-8">
             <div className="w-full max-w-md">
               <div className="relative aspect-[4/5] rounded-2xl overflow-hidden glass mb-4 shadow-2xl border border-white/5">
@@ -130,15 +198,18 @@ export default function ProductDetail() {
             </div>
           </motion.div>
 
+          {/* Right Column - Details */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
             <span className="text-accent text-xs font-semibold tracking-[0.2em] uppercase">{product.Category?.name || product.category}</span>
             <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-white">{product.name}</h1>
+            
             <div className="mt-3 flex items-center gap-3">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.avgRating || 0) ? 'fill-accent text-accent' : 'text-white/10'}`} />)}
               </div>
               <span className="text-sm text-white/40">{product.avgRating || 0} ({reviews.length} reviews)</span>
             </div>
+            
             <div className="mt-6 flex items-baseline gap-3">
               <span className="text-3xl font-bold text-white">₹{(discountPrice || product.price)?.toLocaleString()}</span>
               {discountPrice && (
@@ -148,6 +219,7 @@ export default function ProductDetail() {
                 </>
               )}
             </div>
+            
             <p className="mt-6 text-sm text-white/50 leading-relaxed">{product.description}</p>
 
             {/* Color selector */}
@@ -162,6 +234,7 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Size selector */}
             <div className="mt-8">
               <span className="text-sm font-medium text-white/70">Size</span>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -172,6 +245,7 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Quantity */}
             <div className="mt-8 flex items-center gap-4">
               <span className="text-sm font-medium text-white/70">Qty</span>
               <div className="flex items-center glass rounded-xl">
@@ -182,26 +256,31 @@ export default function ProductDetail() {
               <span className="text-xs text-white/30">{product.stock || 0} in stock</span>
             </div>
 
+            {/* Action Buttons - Add to Cart & Buy Now */}
             <div className="mt-8 flex gap-3">
-              <button onClick={handleAddToCart} className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold transition-all glow-red-hover">
-                <ShoppingBag className="w-5 h-5" /> Add to Cart
+              <button onClick={handleAddToCart} disabled={isAdding || product.stock === 0}
+                className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-white/20 text-white font-semibold hover:bg-white/5 transition-all disabled:opacity-50">
+                <ShoppingBag className="w-5 h-5" /> {isAdding ? 'Adding...' : 'Add to Cart'}
+              </button>
+              <button onClick={handleBuyNow} disabled={isAdding || product.stock === 0}
+                className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold transition-all glow-red-hover disabled:opacity-50">
+                <Zap className="w-5 h-5" /> Buy Now
               </button>
               <button onClick={toggleWishlist} className={`p-4 rounded-xl glass glass-hover transition-colors ${inWishlist ? 'text-accent' : 'text-white/50 hover:text-accent'}`}>
                 <Heart className={`w-5 h-5 ${inWishlist ? 'fill-accent' : ''}`} />
               </button>
             </div>
 
+            {/* Perks */}
             <div className="mt-8 grid grid-cols-3 gap-3">
-              {[{ icon: Truck, label: 'Free Delivery' }, { icon: ShieldCheck, label: 'Genuine Product' }, { icon: RefreshCcw, label: 'Easy Returns' }].map((perk) => (
-                <div key={perk.label} className="text-center py-3 rounded-xl glass">
-                  <perk.icon className="w-4 h-4 mx-auto text-accent mb-1" /><span className="text-[10px] text-white/40">{perk.label}</span>
-                </div>
-              ))}
+              <div className="text-center py-3 rounded-xl glass"><Truck className="w-4 h-4 mx-auto text-accent mb-1" /><span className="text-[10px] text-white/40">Free Delivery</span></div>
+              <div className="text-center py-3 rounded-xl glass"><ShieldCheck className="w-4 h-4 mx-auto text-accent mb-1" /><span className="text-[10px] text-white/40">Genuine Product</span></div>
+              <div className="text-center py-3 rounded-xl glass"><RefreshCcw className="w-4 h-4 mx-auto text-accent mb-1" /><span className="text-[10px] text-white/40">Easy Returns</span></div>
             </div>
           </motion.div>
         </div>
 
-        {/* Reviews */}
+        {/* Reviews Section */}
         <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-24">
           <h2 className="text-2xl font-bold gradient-text mb-8">Reviews</h2>
           {token && (
@@ -209,7 +288,9 @@ export default function ProductDetail() {
               <h3 className="text-sm font-semibold text-white mb-4">Write a review</h3>
               <div className="flex items-center gap-2 mb-4">
                 {[1, 2, 3, 4, 5].map((r) => (
-                  <button key={r} type="button" onClick={() => setReviewRating(r)}><Star className={`w-5 h-5 ${r <= reviewRating ? 'fill-accent text-accent' : 'text-white/10'}`} /></button>
+                  <button key={r} type="button" onClick={() => setReviewRating(r)}>
+                    <Star className={`w-5 h-5 ${r <= reviewRating ? 'fill-accent text-accent' : 'text-white/10'}`} />
+                  </button>
                 ))}
               </div>
               <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} required placeholder="Share your experience..." rows={3}

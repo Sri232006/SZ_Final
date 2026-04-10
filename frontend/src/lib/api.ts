@@ -140,17 +140,12 @@ export const addressAPI = {
 // ─── Wishlist ────────────────────────────────────
 export const wishlistAPI = {
   getAll: () => api.get('/wishlist'),
-  add: (productId: string) =>
-    api.post(`/wishlist/product/${productId}`),
-  remove: (id: string) =>
-    api.delete(`/wishlist/item/${id}`),
-  checkStatus: (productId: string) =>
-    api.get(`/wishlist/product/${productId}/status`),
-  moveToCart: (id: string) =>
-    api.post(`/wishlist/item/${id}/move-to-cart`),
+  add: (productId: string) => api.post(`/wishlist/product/${productId}`),
+  remove: (id: string) => api.delete(`/wishlist/item/${id}`),
+  checkStatus: (productId: string) => api.get(`/wishlist/product/${productId}/status`),
+  moveToCart: (id: string) => api.post(`/wishlist/item/${id}/move-to-cart`, {}),
   getCount: () => api.get('/wishlist/count'),
   clear: () => api.delete('/wishlist/clear'),
-  checkPriceDrops: () => api.get('/wishlist/price-drops'),
 };
 
 // ─── Coupons ─────────────────────────────────────

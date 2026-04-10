@@ -7,6 +7,22 @@ const Wishlist = sequelize.define('Wishlist', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id',
+    },
+  },
+  productId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'Products',
+      key: 'id',
+    },
+  },
   notes: {
     type: DataTypes.TEXT,
     comment: 'User notes for this wishlist item',
@@ -28,7 +44,7 @@ const Wishlist = sequelize.define('Wishlist', {
   indexes: [
     {
       unique: true,
-      fields: ['userId', 'productId'], // Prevent duplicate wishlist items
+      fields: ['userId', 'productId'],
     },
   ],
 });

@@ -11,7 +11,7 @@ interface AuthState {
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
   checkAuth: () => Promise<void>;
-  hydrate: () => void; // Keeping for legacy/compatibility if needed
+  hydrate: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -19,14 +19,22 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       token: null,
-      isLoading: true, // true initially until ClientInitializer sets it false
+      isLoading: true,
 
       setAuth: (user, token) => {
         set({ user, token, isLoading: false });
+        // After login, sync cart
+        setTimeout(() => {
+          const { useCartStore } = require('./cartStore');
+          useCartStore.getState().fetchCart();
+        }, 100);
       },
 
       logout: () => {
         set({ user: null, token: null, isLoading: false });
+        // Clear cart on logout
+        const { useCartStore } = require('./cartStore');
+        useCartStore.getState().resetCart();
       },
 
       updateUser: (userData) => {
@@ -45,22 +53,20 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const { data } = await userAPI.getProfile();
-          // Fresh profile update ensures token is valid and user is up to date
           const userData = data.data?.user || data.data;
           set({ user: userData, isLoading: false });
         } catch {
-          // Token invalid or expired
           set({ user: null, token: null, isLoading: false });
         }
       },
 
       hydrate: () => {
-        set({ isLoading: false }); // Handled implicitly by persist now, but sets loading false safely
+        set({ isLoading: false });
       },
     }),
     {
       name: 'sz_auth',
-      partialize: (state) => ({ token: state.token, user: state.user }), // only persist these fields
+      partialize: (state) => ({ token: state.token, user: state.user }),
     }
   )
 );

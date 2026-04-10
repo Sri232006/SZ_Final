@@ -1,3 +1,6 @@
+/* Import Google Fonts - MUST be at the very top */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
 @import "tailwindcss";
 
 :root {
@@ -7,13 +10,13 @@
   --surface-light: #141414;
   --border: #1a1a1a;
   --border-light: #2a2a2a;
-  --accent: #ef4444;
-  --accent-hover: #dc2626;
+  --accent: #DC143C;  /* Changed to Crimson Red */
+  --accent-hover: #B01030;  /* Darker Crimson for hover */
   --muted: #737373;
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-bg-hover: rgba(255, 255, 255, 0.06);
-  --glow-red: 0 0 20px rgba(239, 68, 68, 0.3), 0 0 60px rgba(239, 68, 68, 0.1);
+  --glow-red: 0 0 20px rgba(220, 20, 60, 0.3), 0 0 60px rgba(220, 20, 60, 0.1);  /* Updated glow */
   --glow-white: 0 0 20px rgba(255, 255, 255, 0.1), 0 0 60px rgba(255, 255, 255, 0.05);
 }
 
@@ -42,23 +45,53 @@
 
 /* Selection */
 ::selection {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(220, 20, 60, 0.3);  /* Updated to Crimson */
   color: #ffffff;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter, 'Inter', system-ui, -apple-system, sans-serif);
+  font-family: 'Times New Roman', 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
 }
 
+/* ========== FONT CLASSES ========== */
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
+.font-montserrat {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-serif {
+  font-family: 'Times New Roman', Georgia, serif;
+}
+
+/* All headings use Times New Roman (serif) */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Times New Roman', Georgia, serif;
+}
+
+/* Buttons and CTAs also use Times New Roman */
+button,
+.badge,
+.cta-text {
+  font-family: 'Times New Roman', Georgia, serif;
+}
+/* ================================= */
+
 /* Glass morphism utility classes */
 .glass {
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-strong {
@@ -69,22 +102,22 @@ body {
 }
 
 .glass-hover:hover {
-  background: var(--glass-bg-hover);
+  background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Glow effects */
 .glow-red {
-  box-shadow: var(--glow-red);
+  box-shadow: 0 0 20px rgba(220, 20, 60, 0.3), 0 0 60px rgba(220, 20, 60, 0.1);
 }
 .glow-white {
-  box-shadow: var(--glow-white);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1), 0 0 60px rgba(255, 255, 255, 0.05);
 }
 .glow-red-hover:hover {
-  box-shadow: var(--glow-red);
+  box-shadow: 0 0 20px rgba(220, 20, 60, 0.3), 0 0 60px rgba(220, 20, 60, 0.1);
 }
 .glow-text-red {
-  text-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(239, 68, 68, 0.2);
+  text-shadow: 0 0 20px rgba(220, 20, 60, 0.5), 0 0 40px rgba(220, 20, 60, 0.2);
 }
 
 /* Gradient text */
@@ -95,7 +128,7 @@ body {
   background-clip: text;
 }
 .gradient-text-accent {
-  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  background: linear-gradient(135deg, #DC143C 0%, #ff6b6b 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -139,6 +172,6 @@ body {
   animation: shimmer 2s infinite;
 }
 
-/* Hide scrollbar for horizontal scroll sections */
+/* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

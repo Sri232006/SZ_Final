@@ -23,70 +23,104 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     couponCode,
     notes,
     useSameAddress = true,
+    directBuy,
+    items: directItems,
   } = req.body;
 
   // Start transaction
   const transaction = await sequelize.transaction();
 
   try {
-    // Get cart items with product details
-    const cartItems = await Cart.findAll({
-      where: { userId: req.user.id },
-      include: [
-        {
-          model: Product,
-          attributes: ['id', 'name', 'price', 'stock', 'discount'],
-        },
-      ],
-      transaction,
-    });
-
-    if (cartItems.length === 0) {
-      await transaction.rollback();
-      return next(new AppError('Cart is empty', 400));
-    }
-
-    // Validate stock and calculate total
+    let cartItems = [];
     let totalAmount = 0;
-    const orderItems = [];
+    let orderItems = [];
+    let isDirectBuy = directBuy === true;
 
-    for (const item of cartItems) {
-      const product = item.Product;
-      
-      // Check stock
-      if (product.stock < item.quantity) {
+    // Check if direct buy or normal cart
+    if (isDirectBuy && directItems && directItems.length > 0) {
+      // DIRECT BUY MODE - Create order from direct items
+      for (const item of directItems) {
+        const product = await Product.findByPk(item.productId);
+        if (!product) {
+          await transaction.rollback();
+          return next(new AppError(`Product not found: ${item.productId}`, 404));
+        }
+        if (product.stock < item.quantity) {
+          await transaction.rollback();
+          return next(new AppError(`Insufficient stock for ${product.name}`, 400));
+        }
+        const itemPrice = product.discount > 0 
+          ? product.price - (product.price * product.discount / 100)
+          : product.price;
+        const itemTotal = itemPrice * item.quantity;
+        totalAmount += parseFloat(itemTotal);
+        orderItems.push({
+          productId: product.id,
+          quantity: item.quantity,
+          price: itemPrice,
+          size: item.size || 'M',
+          color: item.color || 'Black',
+          productName: product.name,
+        });
+        // Update stock
+        await Product.decrement('stock', {
+          by: item.quantity,
+          where: { id: product.id },
+          transaction,
+        });
+      }
+    } else {
+      // NORMAL CART CHECKOUT - Get from cart
+      cartItems = await Cart.findAll({
+        where: { userId: req.user.id },
+        include: [
+          {
+            model: Product,
+            attributes: ['id', 'name', 'price', 'stock', 'discount'],
+          },
+        ],
+        transaction,
+      });
+
+      if (cartItems.length === 0) {
         await transaction.rollback();
-        return next(new AppError(`Insufficient stock for ${product.name}. Only ${product.stock} available.`, 400));
+        return next(new AppError('Cart is empty', 400));
       }
 
-      // Calculate item price with discount
-      const itemPrice = product.discount > 0 
-        ? product.price - (product.price * product.discount / 100)
-        : product.price;
-      
-      const itemTotal = itemPrice * item.quantity;
-      totalAmount += parseFloat(itemTotal);
-
-      orderItems.push({
-        productId: product.id,
-        quantity: item.quantity,
-        price: itemPrice,
-        size: item.size,
-        color: item.color,
-        productName: product.name,
-      });
+      for (const item of cartItems) {
+        const product = item.Product;
+        if (product.stock < item.quantity) {
+          await transaction.rollback();
+          return next(new AppError(`Insufficient stock for ${product.name}. Only ${product.stock} available.`, 400));
+        }
+        const itemPrice = product.discount > 0 
+          ? product.price - (product.price * product.discount / 100)
+          : product.price;
+        const itemTotal = itemPrice * item.quantity;
+        totalAmount += parseFloat(itemTotal);
+        orderItems.push({
+          productId: product.id,
+          quantity: item.quantity,
+          price: itemPrice,
+          size: item.size,
+          color: item.color,
+          productName: product.name,
+        });
+        // Update stock
+        await Product.decrement('stock', {
+          by: item.quantity,
+          where: { id: product.id },
+          transaction,
+        });
+      }
     }
 
-    // Handle addresses
+    // Handle addresses (same as before)
     let shippingAddr, billingAddr;
 
-    // Get or create shipping address
     if (shippingAddressId) {
       shippingAddr = await Address.findOne({
-        where: {
-          id: shippingAddressId,
-          userId: req.user.id,
-        },
+        where: { id: shippingAddressId, userId: req.user.id },
         transaction,
       });
       if (!shippingAddr) {
@@ -101,16 +135,11 @@ exports.createOrder = catchAsync(async (req, res, next) => {
         phone: newShippingAddress.phone || phone || req.user.phone,
       }, { transaction });
     } else {
-      // Get default shipping address
       shippingAddr = await Address.findOne({
-        where: { 
-          userId: req.user.id, 
-          isShippingDefault: true 
-        },
+        where: { userId: req.user.id, isShippingDefault: true },
         transaction,
       });
       if (!shippingAddr) {
-        // Fallback to any address
         shippingAddr = await Address.findOne({
           where: { userId: req.user.id },
           transaction,
@@ -122,15 +151,11 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       }
     }
 
-    // Get or create billing address
     if (useSameAddress) {
       billingAddr = shippingAddr;
     } else if (billingAddressId) {
       billingAddr = await Address.findOne({
-        where: {
-          id: billingAddressId,
-          userId: req.user.id,
-        },
+        where: { id: billingAddressId, userId: req.user.id },
         transaction,
       });
       if (!billingAddr) {
@@ -145,10 +170,9 @@ exports.createOrder = catchAsync(async (req, res, next) => {
         phone: newBillingAddress.phone || phone || req.user.phone,
       }, { transaction });
     } else {
-      billingAddr = shippingAddr; // Fallback to shipping
+      billingAddr = shippingAddr;
     }
 
-    // Create address snapshots (store the address data at time of order)
     const shippingSnapshot = shippingAddr.toJSON();
     delete shippingSnapshot.createdAt;
     delete shippingSnapshot.updatedAt;
@@ -177,23 +201,18 @@ exports.createOrder = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid or expired coupon', 400));
       }
 
-      // Check usage limit
       if (appliedCoupon.usageLimit && appliedCoupon.usedCount >= appliedCoupon.usageLimit) {
         await transaction.rollback();
         return next(new AppError('Coupon usage limit exceeded', 400));
       }
 
-      // Check minimum order value
       if (totalAmount < appliedCoupon.minOrderValue) {
         await transaction.rollback();
         return next(new AppError(`Minimum order value for this coupon is ₹${appliedCoupon.minOrderValue}`, 400));
       }
 
-      // Calculate discount
       discountAmount = calculateDiscount(totalAmount, appliedCoupon);
       couponId = appliedCoupon.id;
-
-      // Increment coupon usage
       await appliedCoupon.increment('usedCount', { transaction });
     }
 
@@ -229,22 +248,14 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       { transaction }
     );
 
-    // Update product stock
-    for (const item of cartItems) {
-      await Product.decrement('stock', {
-        by: item.quantity,
-        where: { id: item.productId },
+    // Clear cart only if not direct buy
+    if (!isDirectBuy) {
+      await Cart.destroy({
+        where: { userId: req.user.id },
         transaction,
       });
     }
 
-    // Clear cart
-    await Cart.destroy({
-      where: { userId: req.user.id },
-      transaction,
-    });
-
-    // Commit transaction
     await transaction.commit();
 
     // Fetch complete order for response
@@ -275,11 +286,11 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       ],
     });
 
-    // Send email confirmation (async, don't await)
+    // Send email confirmation
     emailService.sendOrderConfirmation(req.user.email, completeOrder, req.user.name)
       .catch(err => console.error('Email sending failed:', err));
 
-    // Send WhatsApp order confirmation (async)
+    // Send WhatsApp order confirmation
     const orderPhone = phone || req.user.phone;
     if (orderPhone) {
       const itemCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -309,24 +320,12 @@ exports.createOrder = catchAsync(async (req, res, next) => {
           },
         },
       });
-    } else if (paymentMethod === 'cod') {
-      // Cash on delivery - order is confirmed
-      await order.update({ 
-        paymentStatus: 'pending',
-        status: 'confirmed' 
-      });
-
+    } else {
       res.status(201).json({
         status: 'success',
         data: {
           order: completeOrder,
-          message: 'Order placed successfully. Pay on delivery.',
         },
-      });
-    } else {
-      res.status(201).json({
-        status: 'success',
-        data: completeOrder,
       });
     }
 
@@ -335,7 +334,6 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     throw error;
   }
 });
-
 // @desc    Get all orders for current user
 // @route   GET /api/orders
 // @access  Private
