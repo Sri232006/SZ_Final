@@ -120,11 +120,10 @@ export default function RegisterPage() {
         <Image src="/images/hero6.jpg" alt="Fashion" fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black" />
         <div className="absolute bottom-16 left-16 right-16">
-          <Image src="/images/southzone_logo_final.jpg" alt="Southzone" width={200} height={60} className="h-12 w-auto rounded mb-4" />
-          <p className="text-white/50 text-sm max-w-sm">Join the Southzone community. Exclusive drops, early access, and more.</p>
+
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-background">
+      <div className="flex-1 flex items-center justify-center p-6 pt-28 lg:p-16 lg:pt-32 bg-background">
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-md">
           <div className="lg:hidden mb-8"><Image src="/images/southzone_logo_final.jpg" alt="SouthZone" width={140} height={42} className="h-8 w-auto rounded" /></div>
           <h1 className="text-3xl font-bold text-white">Create account</h1>
