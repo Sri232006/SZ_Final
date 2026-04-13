@@ -212,7 +212,7 @@ export default function RegisterPage() {
                       }
                       <span className={passwordStrength.hasNumber ? 'text-green-400' : 'text-white/30'}>Number</span>
                     </div>
-                    <div className="flex items-center gap-1.5 col-span-2">
+                    <div className="flex items-center gap-1.5 col-span-">
                       {passwordStrength.hasSpecialChar ? 
                         <CheckCircle className="w-3.5 h-3.5 text-green-500" /> : 
                         <XCircle className="w-3.5 h-3.5 text-white/20" />

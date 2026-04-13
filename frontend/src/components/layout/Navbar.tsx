@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
+import { productAPI } from '@/lib/api';
 import CartDrawer from './CartDrawer';
 
 const navLinks = [
@@ -29,6 +30,9 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -50,16 +54,44 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!searchOpen) {
+      setSearchQuery('');
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const { data } = await productAPI.search(searchQuery.trim());
+        setSearchResults(data.data || []);
+      } catch (error) {
+        console.error('Search error', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, searchOpen]);
+
   return (
     <>
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled
-            ? 'glass-strong shadow-lg shadow-black/20'
-            : 'bg-transparent'
+        className={`fixed top-0 left-0 right-0 z-50 bg-background transition-all duration-500 ${
+          scrolled ? 'shadow-lg shadow-black/20 border-b border-white/5' : ''
         }`}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -235,6 +267,8 @@ export default function Navbar() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
                     type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search for hoodies, shirts, pants..."
                     autoFocus
                     className="w-full rounded-full bg-white/5 border border-white/10 py-3 pl-12 pr-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
@@ -244,6 +278,39 @@ export default function Navbar() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+                
+                {/* Search Results */}
+                {searchQuery.trim().length >= 2 && (
+                  <div className="mt-4 border-t border-white/10 pt-4 flex flex-col gap-2 max-h-96 overflow-y-auto scrollbar-hide">
+                    {isSearching ? (
+                      <div className="text-white/50 text-sm text-center py-4">Searching...</div>
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((product) => {
+                        const img = product.images?.find((im: any) => im.isPrimary) || product.images?.[0];
+                        const imgSrc = img?.url || img?.imageUrl || '/images/hoodie.jpg';
+                        const price = product.discountPrice || product.salePrice || product.price || 0;
+                        return (
+                          <Link 
+                            key={product.id} 
+                            href={`/shop/${product.id}`} 
+                            onClick={() => setSearchOpen(false)} 
+                            className="flex items-center gap-4 p-2 rounded-xl hover:bg-white/5 transition-colors"
+                          >
+                            <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5">
+                              <Image src={imgSrc} alt={product.name} fill className="object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white line-clamp-1">{product.name}</p>
+                              <p className="text-xs text-accent font-bold mt-1">₹{Number(price).toLocaleString()}</p>
+                            </div>
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <div className="text-white/50 text-sm text-center py-4">No products found</div>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

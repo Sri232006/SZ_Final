@@ -187,6 +187,8 @@ export const adminAPI = {
   getOrders: () => api.get('/admin/orders'),
   updateOrderStatus: (id: string, data: Record<string, string>) =>
     api.patch(`/admin/orders/${id}/status`, data),
+  updateOrderDeliveryDate: (id: string, data: { deliveryDate: string }) =>
+    api.patch(`/admin/orders/${id}/delivery-date`, data),
   // Products (admin uses the product routes which are admin-restricted)
   createProduct: (formData: FormData) =>
     api.post('/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),

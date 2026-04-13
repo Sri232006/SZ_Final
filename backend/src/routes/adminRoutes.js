@@ -19,6 +19,7 @@ router.put('/landing-config', adminController.updateLandingConfig);
 // Orders management
 router.get('/orders', adminController.getAllOrders);
 router.patch('/orders/:id/status', adminController.updateOrderStatus);
+router.patch('/orders/:id/delivery-date', adminController.updateDeliveryDate);
 
 // Categories management
 router.get('/categories', adminController.getAllCategories);

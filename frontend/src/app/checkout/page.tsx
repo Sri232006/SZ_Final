@@ -9,14 +9,15 @@ import { MapPin, CreditCard, Truck, ShieldCheck, ChevronLeft, Plus } from 'lucid
 import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { addressAPI, orderAPI } from '@/lib/api';
+import { addressAPI, orderAPI, productAPI } from '@/lib/api';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { items: cartItems, total: cartTotal, fetchCart, clearCart } = useCartStore();
+  const isDirectBuyQuery = searchParams.get('buy') === 'now';
+  const { fetchCart, clearCart } = useCartStore();
   const { token } = useAuthStore();
   
   const [addresses, setAddresses] = useState<any[]>([]);
@@ -25,130 +26,161 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   
   const [isDirectBuy, setIsDirectBuy] = useState(false);
-  const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
-  const [subtotal, setSubtotal] = useState(0);
+  const [buyNowProduct, setBuyNowProduct] = useState<any | null>(null);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+
+  const activeItems = buyNowProduct ? [buyNowProduct] : cartItems;
+  const subtotal = activeItems.reduce((sum, item) => {
+    const price = item.Product?.discountPrice || item.Product?.price || 0;
+    return sum + price * item.quantity;
+  }, 0);
 
   useEffect(() => {
-    if (!token) { 
-      router.push('/auth/login'); 
-      return; 
+    if (!token) {
+      router.push('/auth/login');
+      return;
     }
-    
+
+    let active = true;
+
     async function load() {
-      // FIRST: Check for direct buy item
-      const storedItem = localStorage.getItem('directBuyItem');
-      console.log('Stored item in checkout:', storedItem);
-      
-      if (storedItem) {
-        // DIRECT BUY MODE
-        const directItem = JSON.parse(storedItem);
-        console.log('Direct buy mode - product:', directItem.productName);
-        
-        setIsDirectBuy(true);
-        setCheckoutItems([{
-          id: 'direct',
-          productId: directItem.productId,
-          quantity: directItem.quantity,
-          size: directItem.size,
-          color: directItem.color,
-          Product: {
-            name: directItem.productName,
-            price: directItem.price,
-            discountPrice: directItem.price,
-            images: directItem.image ? [{ url: directItem.image }] : [{ url: '/images/hero1.jpg' }]
-          }
-        }]);
-        setSubtotal(directItem.price * directItem.quantity);
-        
-        // Clear localStorage after reading
-        localStorage.removeItem('directBuyItem');
-        
-        // Fetch addresses
-        try {
-          const { data } = await addressAPI.getAll();
-          const addrs = data.data || [];
-          setAddresses(addrs);
-          const def = addrs.find((a: any) => a.isDefault);
-          if (def) setSelectedAddress(def.id.toString());
-          else if (addrs.length > 0) setSelectedAddress(addrs[0].id.toString());
-        } catch (addrErr) {
-          console.log('Address fetch failed');
-        }
-        
-        setLoading(false);
-        return;
-      }
-      
-      // NORMAL CHECKOUT
+      setLoading(true);
       try {
-        await fetchCart();
-        setIsDirectBuy(false);
-        setCheckoutItems(cartItems);
-        setSubtotal(cartTotal);
-        
+        if (isDirectBuyQuery) {
+          const directBuyProductId = searchParams.get('productId');
+          const directQuantity = Number(searchParams.get('quantity') || '1');
+          const directSize = searchParams.get('size') || '';
+          const directColor = searchParams.get('color') || 'Default';
+
+          if (directBuyProductId) {
+            const { data } = await productAPI.getById(directBuyProductId);
+            const product = data.data;
+            if (!product) {
+              toast.error('Buy Now product not found. Please try again.');
+              return;
+            }
+
+            setIsDirectBuy(true);
+            setBuyNowProduct({
+              id: 'direct',
+              productId: product.id,
+              quantity: directQuantity,
+              size: directSize,
+              color: directColor,
+              Product: {
+                name: product.name,
+                price: product.discountPrice || product.price,
+                discountPrice: product.discountPrice || product.price,
+                images: product.images?.length > 0 ? product.images : [{ url: '/images/hero1.jpg' }],
+              },
+            });
+            setCartItems([]);
+          } else {
+            const storedItem = localStorage.getItem('directBuyItem');
+            if (!storedItem) {
+              toast.error('Buy Now item not found. Please try again.');
+              return;
+            }
+
+            const directItem = JSON.parse(storedItem);
+            setIsDirectBuy(true);
+            setBuyNowProduct({
+              id: 'direct',
+              productId: directItem.productId,
+              quantity: directItem.quantity,
+              size: directItem.size,
+              color: directItem.color,
+              Product: {
+                name: directItem.productName,
+                price: directItem.price,
+                discountPrice: directItem.price,
+                images: directItem.image ? [{ url: directItem.image }] : [{ url: '/images/hero1.jpg' }],
+              },
+            });
+            setCartItems([]);
+            localStorage.removeItem('directBuyItem');
+          }
+        } else {
+          setIsDirectBuy(false);
+          setBuyNowProduct(null);
+          await fetchCart();
+          const { items: cartItemsState } = useCartStore.getState();
+          setCartItems(cartItemsState || []);
+        }
+
         const { data } = await addressAPI.getAll();
         const addrs = data.data || [];
+        if (!active) return;
         setAddresses(addrs);
-        const def = addrs.find((a: any) => a.isDefault);
-        if (def) setSelectedAddress(def.id.toString());
-        else if (addrs.length > 0) setSelectedAddress(addrs[0].id.toString());
-        
+
+        setSelectedAddress((currentSelected) => {
+          if (currentSelected && addrs.some((addr: any) => addr.id.toString() === currentSelected)) {
+            return currentSelected;
+          }
+          const def = addrs.find((a: any) => a.isDefault) || addrs[0];
+          return def?.id.toString() || '';
+        });
       } catch (error) {
-        console.error('Cart fetch error:', error);
-        setCheckoutItems([]);
-        setSubtotal(0);
+        console.error('Checkout load error:', error);
+        if (!isDirectBuyQuery) {
+          setBuyNowProduct(null);
+          setCartItems([]);
+        }
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
     }
-    
+
     load();
-  }, [token, router, fetchCart, cartItems, cartTotal]);
+    return () => { active = false; };
+  }, [token, router, fetchCart, isDirectBuyQuery, searchParams]);
 
   const shipping = subtotal > 999 ? 0 : 99;
   const grandTotal = subtotal + shipping;
 
   const handlePlaceOrder = async () => {
-  console.log('Selected address:', selectedAddress); // Debug log
-  
-  if (!selectedAddress) { 
-    toast.error('Please select a delivery address'); 
-    return; 
-  }
-  
-  setPlacing(true);
-  try {
-    const orderData: any = {
-      shippingAddressId: selectedAddress,  // ← REMOVED parseInt - send as string
-      paymentMethod: 'razorpay',
-    };
-    
-    if (isDirectBuy && checkoutItems.length === 1) {
-      orderData.directBuy = true;
-      orderData.items = checkoutItems.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        size: item.size,
-        color: item.color
-      }));
+    if (!selectedAddress) {
+      toast.error('Please select a delivery address');
+      return;
     }
-    
-    console.log('Order data being sent:', orderData); // Debug log
-    
-    const { data } = await orderAPI.create(orderData);
-    
-    if (!isDirectBuy) {
-      await clearCart();
+
+    if (activeItems.length === 0) {
+      toast.error('No items available for checkout');
+      return;
     }
-    
-    toast.success('Order placed successfully!');
-    router.push(`/checkout/success?order=${data.data?.order?.id || data.data?.id || ''}`);
-  } catch (err: any) {
-    console.error('Order error:', err.response?.data);
-    toast.error(err.response?.data?.message || 'Failed to place order');
-  } finally {
-    setPlacing(false);
-  }
-};
+
+    setPlacing(true);
+    try {
+      const orderData: any = {
+        shippingAddressId: selectedAddress,
+        paymentMethod: 'razorpay',
+      };
+
+      if (isDirectBuy && buyNowProduct) {
+        orderData.directBuy = true;
+        orderData.items = [{
+          productId: buyNowProduct.productId,
+          quantity: buyNowProduct.quantity,
+          size: buyNowProduct.size,
+          color: buyNowProduct.color,
+        }];
+      }
+
+      const { data } = await orderAPI.create(orderData);
+
+      if (!isDirectBuy) {
+        await clearCart();
+      }
+
+      toast.success('Order placed successfully!');
+      router.push(`/checkout/success?order=${data.data?.order?.id || data.data?.id || ''}`);
+    } catch (err: any) {
+      console.error('Order error:', err.response?.data || err);
+      toast.error(err.response?.data?.message || 'Failed to place order');
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -237,10 +269,10 @@ export default function CheckoutPage() {
             {/* Order Items */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="p-6 rounded-2xl glass-strong">
               <h2 className="text-base font-bold text-white flex items-center gap-2 mb-4">
-                <Truck className="w-4 h-4 text-accent" /> Order Items ({checkoutItems.length})
+                <Truck className="w-4 h-4 text-accent" /> Order Items ({activeItems.length})
               </h2>
               <div className="space-y-3">
-                {checkoutItems.map((item: any) => {
+                {activeItems.map((item: any) => {
                   const img = item.Product?.images?.[0]?.url || '/images/hero2.jpg';
                   const price = item.Product?.discountPrice || item.Product?.price || 0;
                   return (

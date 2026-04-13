@@ -199,6 +199,37 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: 'success', data: order });
 });
 
+// ─── Admin Delivery Date ────────────────────────────────
+exports.updateDeliveryDate = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { deliveryDate } = req.body;
+
+  const order = await Order.findByPk(id);
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  // Format delivery date with day name
+  const formattedDate = new Date(deliveryDate);
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  const formattedDeliveryDate = formattedDate.toLocaleDateString('en-IN', options);
+
+  await order.update({
+    deliveryDate,
+    estimatedDelivery: deliveryDate,
+    deliveryDateFormatted: formattedDeliveryDate, // Store formatted date
+  });
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Delivery date updated successfully',
+    data: { 
+      deliveryDate,
+      formattedDeliveryDate,
+    },
+  });
+});
+
 // ─── Admin Categories ────────────────────────────────
 exports.getAllCategories = catchAsync(async (req, res) => {
   const categories = await Category.findAll({ order: [['name', 'ASC']] });

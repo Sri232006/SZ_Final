@@ -7,12 +7,14 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Star, Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, ShieldCheck, RefreshCcw, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { productAPI, cartAPI } from '@/lib/api';
+import { productAPI } from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { formatDeliveryDate } from '@/lib/utils';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -29,13 +31,16 @@ export default function ProductDetail() {
   const { addItem, openCart, fetchCart } = useCartStore();
   const { addItem: addWishlist, removeItem: removeWishlist, isInWishlist, fetchWishlist } = useWishlistStore();
   const { token } = useAuthStore();
+  
+  const deliveryDate = product?.estimatedDelivery 
+    ? formatDeliveryDate(product.estimatedDelivery) 
+    : '';
 
   useEffect(() => {
     async function fetchProduct() {
       try {
         const { data } = await productAPI.getById(id as string);
         setProduct(data.data);
-        // Set default selections
         if (data.data.colors?.length) setSelectedColor(data.data.colors[0]);
         if (data.data.sizes?.length) setSelectedSize(data.data.sizes[0]);
       } catch {
@@ -70,58 +75,38 @@ export default function ProductDetail() {
     }
   };
 
- const handleBuyNow = async () => {
-  if (!token) { 
-    toast.error('Please login first'); 
-    router.push('/auth/login'); 
-    return; 
-  }
-  if (!selectedSize) { 
-    toast.error('Please select a size'); 
-    return; 
-  }
-  
-  setIsAdding(true);
-  try {
-    const priceValue = Number(discountPrice || product.price);
-    
-    const directItem = {
-      productId: product.id.toString(),
-      quantity: quantity,
-      size: selectedSize,
-      color: selectedColor || (colors[0]?.name || 'Default'),
-      productName: product.name,
-      price: priceValue,
-      image: images[0]
-    };
-    
-    console.log('Saving to localStorage:', directItem);
-    
-    // Store in localStorage
-    localStorage.setItem('directBuyItem', JSON.stringify(directItem));
-    
-    // Verify it was saved
-    const checkSaved = localStorage.getItem('directBuyItem');
-    console.log('Verification - saved item:', checkSaved);
-    
-    if (!checkSaved) {
-      console.error('Failed to save to localStorage');
-      toast.error('Failed to process');
-      return;
+  const handleBuyNow = async () => {
+    if (!token) { 
+      toast.error('Please login first'); 
+      router.push('/auth/login'); 
+      return; 
+    }
+    if (!selectedSize) { 
+      toast.error('Please select a size'); 
+      return; 
     }
     
-    // Small delay to ensure storage is written
-    setTimeout(() => {
-      router.push('/checkout');
-    }, 100);
-    
-  } catch (err: any) {
-    console.error('Buy Now error:', err);
-    toast.error(err.response?.data?.message || 'Failed to process');
-  } finally {
-    setIsAdding(false);
-  }
-};
+    setIsAdding(true);
+    try {
+      const productColor = selectedColor || (colors[0]?.name || 'Default');
+      const queryParams = new URLSearchParams({
+        buy: 'now',
+        productId: product.id.toString(),
+        quantity: quantity.toString(),
+        size: selectedSize,
+        color: productColor,
+      }).toString();
+
+      router.push(`/checkout?${queryParams}`);
+      
+    } catch (err: any) {
+      console.error('Buy Now error:', err);
+      toast.error(err.response?.data?.message || 'Failed to process');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+  
   const toggleWishlist = async () => {
     if (!token) { toast.error('Please login first'); router.push('/auth/login'); return; }
     try {
@@ -220,6 +205,17 @@ export default function ProductDetail() {
               )}
             </div>
             
+            {/* Delivery Date - Added here */}
+            {deliveryDate && (
+              <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-accent/5 border border-accent/15">
+                <Truck className="w-4 h-4 text-accent" />
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider">Estimated Delivery</p>
+                  <p className="text-sm font-semibold text-white">{deliveryDate}</p>
+                </div>
+              </div>
+            )}
+            
             <p className="mt-6 text-sm text-white/50 leading-relaxed">{product.description}</p>
 
             {/* Color selector */}
@@ -256,7 +252,7 @@ export default function ProductDetail() {
               <span className="text-xs text-white/30">{product.stock || 0} in stock</span>
             </div>
 
-            {/* Action Buttons - Add to Cart & Buy Now */}
+            {/* Action Buttons */}
             <div className="mt-8 flex gap-3">
               <button onClick={handleAddToCart} disabled={isAdding || product.stock === 0}
                 className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-white/20 text-white font-semibold hover:bg-white/5 transition-all disabled:opacity-50">

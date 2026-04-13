@@ -201,6 +201,9 @@ exports.getProduct = catchAsync(async (req, res, next) => {
 
   productData.relatedProducts = relatedProducts;
 
+  // Set estimated delivery (7 days from now)
+  productData.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
   // Cache for 5 minutes
   await cacheService.set(cacheKey, productData, 300);
 

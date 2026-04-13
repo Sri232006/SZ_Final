@@ -24,6 +24,10 @@ const Order = sequelize.define('Order', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  deliveryDateFormatted: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
   status: {
     type: DataTypes.ENUM(
       'pending',

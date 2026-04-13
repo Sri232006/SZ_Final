@@ -62,7 +62,7 @@ function HeroSection({ config }: { config: any }) {
   };
 
   return (
-    <section className="relative h-screen overflow-hidden bg-black flex items-center justify-center p-4 sm:p-8" onMouseEnter={pauseAutoPlay} onMouseLeave={resumeAutoPlay}>
+    <section className="relative w-full overflow-hidden bg-black flex items-center justify-center p-4 sm:p-8 min-h-[calc(100vh-4rem)] lg:min-h-[calc(100vh-5rem)]" onMouseEnter={pauseAutoPlay} onMouseLeave={resumeAutoPlay}>
       <AnimatePresence initial={false} custom={direction} mode="popLayout">
         <motion.div
           key={current}
@@ -87,7 +87,7 @@ function HeroSection({ config }: { config: any }) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="relative z-10 flex flex-col items-center justify-center w-full h-full max-w-4xl pt-12 lg:pt-0">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-4xl py-12 lg:py-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -112,30 +112,29 @@ function HeroSection({ config }: { config: any }) {
             <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[0.15em] sm:tracking-[0.2em] whitespace-pre-line uppercase text-white mb-6 text-center">
               {slides[current].title.replace(/\n/g, ' ')}
             </h1>
+            <div className="flex items-center justify-center gap-3 mb-8">
+              {slides.map((_: any, i: number) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  className={`transition-all duration-300 rounded-full ${
+                    i === current
+                      ? 'w-2.5 h-2.5 bg-white scale-110'
+                      : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/70'
+                  }`}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
             
             <Link
               href={slides[current].ctaLink || '/shop'}
-              className="font-serif mt-2 bg-white text-black px-10 py-3 text-xs sm:text-sm font-bold tracking-[0.1em] sm:tracking-[0.2em] uppercase hover:bg-gray-200 transition-colors"
+              className="font-serif bg-white text-black px-10 py-3 text-xs sm:text-sm font-bold tracking-[0.1em] sm:tracking-[0.2em] uppercase hover:bg-gray-200 transition-colors"
             >
               {slides[current].cta}
             </Link>
           </motion.div>
         </AnimatePresence>
-
-        <div className="absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2">
-          {slides.map((_: any, i: number) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className={`transition-all duration-300 rounded-full ${
-                i === current
-                  ? 'w-2 h-2 bg-white scale-110'
-                  : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/70'
-              }`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
-        </div>
       </div>
 
       <button
@@ -397,7 +396,7 @@ export default function Home() {
   }
 
   return (
-    <>
+    <div className="pt-16 lg:pt-20">
       {visibleSections.map((section) => {
         const Component = sectionComponents[section.key];
         if (!Component) return null;
@@ -409,6 +408,6 @@ export default function Home() {
 
         return <Component key={section.key} {...props} />;
       })}
-    </>
+    </div>
   );
 }

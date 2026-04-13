@@ -68,7 +68,7 @@ const seedDatabase = async () => {
     // Seed ProductImages
     const productImages = [];
     for (let i = 0; i < createdProducts.length; i++) {
-      for (let j = 1; j <= 2; j++) { // 2 images per product
+      for (let j = 1; j <= 2; j++) {
         productImages.push({
           url: `/images/product${i + 1}_${j}.jpg`,
           isPrimary: j === 1,
@@ -137,7 +137,7 @@ const seedDatabase = async () => {
         discountValue: i % 2 === 0 ? 10 : 50,
         minOrderValue: 500,
         startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         usageLimit: 100,
         isActive: true,
       });
@@ -145,7 +145,15 @@ const seedDatabase = async () => {
     const createdCoupons = await Coupon.bulkCreate(coupons);
     console.log('Coupons seeded.');
 
-    // Seed Orders
+    // Helper function to get random delivery date (5-14 days from now)
+    const getRandomDeliveryDate = () => {
+      const date = new Date();
+      const daysToAdd = Math.floor(Math.random() * 10) + 5; // 5 to 14 days
+      date.setDate(date.getDate() + daysToAdd);
+      return date.toISOString().split('T')[0];
+    };
+
+    // Seed Orders (only added deliveryDate field)
     const orders = [];
     for (let i = 0; i < createdUsers.length; i++) {
       const totalAmount = (Math.random() * 200 + 100).toFixed(2);
@@ -167,15 +175,17 @@ const seedDatabase = async () => {
         shippingAddressId: createdAddresses[i].id,
         billingAddressId: createdAddresses[i].id,
         couponId: createdCoupons[i % createdCoupons.length].id,
+        deliveryDate: getRandomDeliveryDate(),        // ← ADDED
+        estimatedDelivery: getRandomDeliveryDate(),  // ← ADDED
       });
     }
     const createdOrders = await Order.bulkCreate(orders);
-    console.log('Orders seeded.');
+    console.log('Orders seeded with delivery dates.');
 
     // Seed OrderItems
     const orderItems = [];
     for (let i = 0; i < createdOrders.length; i++) {
-      const numItems = Math.floor(Math.random() * 3) + 1; // 1-3 items per order
+      const numItems = Math.floor(Math.random() * 3) + 1;
       for (let j = 0; j < numItems; j++) {
         const product = createdProducts[(i + j) % createdProducts.length];
         orderItems.push({
@@ -209,7 +219,7 @@ const seedDatabase = async () => {
     await Review.bulkCreate(reviews);
     console.log('Reviews seeded.');
 
-    // Seed LandingConfig (only one)
+    // Seed LandingConfig (unchanged)
     await LandingConfig.create({
       sections: [
         {

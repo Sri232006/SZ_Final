@@ -60,20 +60,26 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {items.map((item) => (
+                  {items.map((item: any) => {
+                    const product = item.Product || {};
+                    const img = product.images?.find((im: any) => im.isPrimary) || product.images?.[0];
+                    const imgSrc = img?.url || img?.imageUrl || '/images/hoodie.jpg';
+                    const price = product.discountPrice || product.salePrice || product.price || 0;
+                    
+                    return (
                     <div key={item.id} className="flex gap-4">
                       <div className="relative w-24 h-28 shrink-0 rounded-lg overflow-hidden bg-white/5">
                         <Image
-                          src={item.product?.images?.[0]?.url || '/images/hoodie.jpg'}
-                          alt={item.product?.name || 'Product'}
+                          src={imgSrc}
+                          alt={product.name || 'Product'}
                           fill
                           className="object-cover"
                         />
                       </div>
                       <div className="flex flex-col flex-1 py-1">
                         <div className="flex justify-between items-start gap-2">
-                          <h3 className="text-sm font-medium text-white line-clamp-1">{item.product?.name}</h3>
-                          <p className="text-sm font-bold text-white whitespace-nowrap">₹{item.product?.price}</p>
+                          <h3 className="text-sm font-medium text-white line-clamp-1">{product.name}</h3>
+                          <p className="text-sm font-bold text-white whitespace-nowrap">₹{Number(price).toLocaleString()}</p>
                         </div>
                         <p className="text-xs text-white/40 mt-1 uppercase tracking-wider">
                           {item.size} | {item.color}
@@ -105,7 +111,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>
@@ -115,7 +121,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               <div className="p-6 border-t border-white/5 bg-surface/50">
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-white/60 text-sm">Subtotal</span>
-                  <span className="text-xl font-bold text-white">₹{total}</span>
+                  <span className="text-xl font-bold text-white">₹{Number(total).toLocaleString()}</span>
                 </div>
                 <Link
                   href="/checkout"

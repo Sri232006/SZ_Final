@@ -5,17 +5,17 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Minus, Plus, X, ShoppingBag, ArrowRight, Tag, Zap } from 'lucide-react';
+import { Minus, Plus, X, ArrowRight, Tag, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { couponAPI, cartAPI } from '@/lib/api';
+import { couponAPI } from '@/lib/api';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, total, isLoading, fetchCart, updateQuantity, removeItem } = useCartStore();
+  const { items, total, fetchCart, updateQuantity, removeItem } = useCartStore();
   const { token } = useAuthStore();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
@@ -70,18 +70,15 @@ export default function CartPage() {
   }
   setBuyingNow(item.id);
   try {
-    const product = item.Product || {};
-    const directItem = {
+    const productColor = item.color || 'Default';
+    const queryParams = new URLSearchParams({
+      buy: 'now',
       productId: item.productId,
-      quantity: item.quantity,
-      size: item.size,
-      color: item.color,
-      productName: product.name,
-      price: product.discountPrice || product.salePrice || product.price,
-      image: product.images?.[0]?.url
-    };
-    localStorage.setItem('directBuyItem', JSON.stringify(directItem));
-    router.push('/checkout?buy=now');
+      quantity: item.quantity.toString(),
+      size: item.size || '',
+      color: productColor,
+    }).toString();
+    router.push(`/checkout?${queryParams}`);
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to process');
   } finally {
@@ -191,7 +188,7 @@ export default function CartPage() {
               </div>
               
               {couponApplied && (
-                <p className="text-xs text-emerald-400 mb-4">Coupon "{couponApplied}" applied ✓</p>
+                <p className="text-xs text-emerald-400 mb-4">Coupon applied: {couponApplied} ✓</p>
               )}
               
               <div className="space-y-3 text-sm">
