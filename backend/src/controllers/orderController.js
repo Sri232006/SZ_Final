@@ -129,6 +129,10 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     const orderNumber = `SZ${timestamp}${random}`;
     const finalAmount = totalAmount;
 
+    // Calculate delivery date (7 days from now)
+    const estimatedDelivery = new Date();
+    estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
+
     // Create order
     const order = await Order.create({
       orderNumber,
@@ -136,8 +140,8 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       totalAmount,
       discountAmount: 0,
       finalAmount,
-      status: 'confirmed',
-      paymentStatus: 'completed',
+      status: 'pending',
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
       paymentMethod: paymentMethod || 'razorpay',
       shippingAddressId: shippingAddr.id,
       billingAddressId: shippingAddr.id,
@@ -145,6 +149,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       billingAddressSnapshot: shippingSnapshot,
       phone: shippingAddr.phone || req.user.phone,
       email: req.user.email,
+      estimatedDelivery,
     }, { transaction });
 
     // Create order items

@@ -86,7 +86,16 @@ export default function OrderDetailPage() {
   const StatusIcon = status.icon;
   const items = order.orderItems || [];
   const addr = order.shippingAddress;
-  const deliveryStatus = getDeliveryStatus(order.deliveryDate);
+  
+  // Fallback to exactly 7 days after creation if both are fundamentally missing (to support older orders)
+  let dateToCheck = order.deliveryDate || order.estimatedDelivery;
+  if (!dateToCheck && order.createdAt) {
+    const fallbackDate = new Date(order.createdAt);
+    fallbackDate.setDate(fallbackDate.getDate() + 7);
+    dateToCheck = fallbackDate.toISOString();
+  }
+
+  const deliveryStatus = getDeliveryStatus(dateToCheck);
   const DeliveryIcon = deliveryStatus?.icon || Calendar;
 
   return (
@@ -117,7 +126,7 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Delivery Date Card */}
-          {order.deliveryDate && (
+          {dateToCheck && (
             <div className={`p-5 rounded-2xl ${deliveryStatus?.bg || 'glass-strong'} mb-6 border ${deliveryStatus?.color.replace('text', 'border') || 'border-white/10'}`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full ${deliveryStatus?.bg || 'bg-accent/10'} flex items-center justify-center`}>
@@ -126,7 +135,7 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-xs text-white/40">Expected Delivery Date</p>
                   <p className="text-base font-semibold text-white">
-                    {formatDeliveryDate(order.deliveryDate)}
+                    {formatDeliveryDate(dateToCheck)}
                   </p>
                   {deliveryStatus && (
                     <p className={`text-xs ${deliveryStatus.color} mt-0.5`}>

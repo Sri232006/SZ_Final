@@ -165,9 +165,7 @@ export const whatsappAPI = {
     api.get('/whatsapp/status'),
 };
 
-// ─── Public Config ───────────────────────────────
 export const configAPI = {
-  getLanding: () => api.get('/config/landing'),
   getCategories: () => api.get('/config/categories'),
 };
 
@@ -180,9 +178,7 @@ export const adminAPI = {
   updateUser: (id: string, data: Record<string, unknown>) => api.patch(`/admin/users/${id}`, data),
   promoteUser: (id: string) => api.post(`/admin/users/${id}/promote`),
   deactivateUser: (id: string) => api.post(`/admin/users/${id}/deactivate`),
-  // Landing Config
-  getLandingConfig: () => api.get('/admin/landing-config'),
-  updateLandingConfig: (sections: unknown[]) => api.put('/admin/landing-config', { sections }),
+
   // Orders
   getOrders: () => api.get('/admin/orders'),
   updateOrderStatus: (id: string, data: Record<string, string>) =>

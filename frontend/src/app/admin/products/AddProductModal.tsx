@@ -11,9 +11,10 @@ interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: any;
 }
 
-export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProductModalProps) {
+export default function AddProductModal({ isOpen, onClose, onSuccess, initialData }: AddProductModalProps) {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -35,8 +36,25 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
   useEffect(() => {
     if (isOpen) {
       adminAPI.getCategories().then((res) => setCategories(res.data?.data || [])).catch(() => {});
+      if (initialData) {
+        setFormData({
+          name: initialData.name || '',
+          brand: initialData.brand || '',
+          description: initialData.description || '',
+          price: initialData.price || '',
+          color: initialData.color || '',
+          size: initialData.size || 'M',
+          material: initialData.material || '',
+          stock: initialData.stock || '',
+          discount: initialData.discount || '0',
+          categoryId: initialData.categoryId || ''
+        });
+      } else {
+        setFormData({ name: '', brand: '', description: '', price: '', color: '', size: 'M', material: '', stock: '', discount: '0', categoryId: '' });
+      }
+      setImages([]); // clear images when opened
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -51,12 +69,17 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
       });
       images.forEach((img) => form.append('images', img));
 
-      await adminAPI.createProduct(form as any);
-      toast.success('Product created successfully!');
+      if (initialData?.id) {
+        await adminAPI.updateProduct(initialData.id.toString(), form as any);
+        toast.success('Product updated successfully!');
+      } else {
+        await adminAPI.createProduct(form as any);
+        toast.success('Product created successfully!');
+      }
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to create product');
+      toast.error(err.response?.data?.message || `Failed to ${initialData ? 'update' : 'create'} product`);
     } finally {
       setSaving(false);
     }
@@ -74,7 +97,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
       
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl z-10">
         <div className="sticky top-0 bg-surface/80 backdrop-blur-xl border-b border-white/5 p-6 flex items-center justify-between z-20">
-          <h2 className="text-xl font-bold text-white">Add New Product</h2>
+          <h2 className="text-xl font-bold text-white">{initialData ? 'Edit Product' : 'Add New Product'}</h2>
           <button onClick={onClose} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-all">
             <X className="w-5 h-5" />
           </button>
@@ -166,7 +189,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
             </button>
             <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold transition-all glow-red-hover disabled:opacity-50">
               {saving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-              {saving ? 'Creating...' : 'Create Product'}
+              {saving ? (initialData ? 'Updating...' : 'Creating...') : (initialData ? 'Save Changes' : 'Create Product')}
             </button>
           </div>
         </form>

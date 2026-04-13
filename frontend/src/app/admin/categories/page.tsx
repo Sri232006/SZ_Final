@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tag, Plus, Edit2, Trash2, CheckCircle2, X } from 'lucide-react';
+import { Library, PlusCircle, PenLine, Trash2, CheckCircle2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI } from '@/lib/api';
 
@@ -31,8 +31,11 @@ export default function AdminCategories() {
       const { data } = await adminAPI.getCategories();
       const payload = data.data;
       setCategories(payload?.categories || (Array.isArray(payload) ? payload : []));
-    } catch { /* ignore */ }
-    setLoading(false);
+    } catch { 
+      toast.error('Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleOpenModal = (category?: any) => {
@@ -86,7 +89,7 @@ export default function AdminCategories() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-white">Categories</h1>
         <button onClick={() => handleOpenModal()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-all glow-red-hover">
-          <Plus className="w-4 h-4" /> Add Category
+          <PlusCircle className="w-4 h-4" /> Add Category
         </button>
       </div>
 
@@ -104,7 +107,7 @@ export default function AdminCategories() {
               
               <div className="pt-4 border-t border-white/5 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => handleOpenModal(cat)} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors">
-                  <Edit2 className="w-4 h-4" />
+                  <PenLine className="w-4 h-4" />
                 </button>
                 <button onClick={() => handleDelete(cat.id)} className="p-2 rounded-lg text-white/50 hover:text-red-400 hover:bg-red-400/10 transition-colors">
                   <Trash2 className="w-4 h-4" />
@@ -114,7 +117,7 @@ export default function AdminCategories() {
           ))}
           {categories.length === 0 && (
             <div className="col-span-full p-12 text-center text-white/20 border border-white/5 border-dashed rounded-2xl">
-              <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <Library className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No categories created yet</p>
             </div>
           )}

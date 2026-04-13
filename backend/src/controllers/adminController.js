@@ -1,4 +1,4 @@
-const { User, Product, Order, Coupon, LandingConfig, Category } = require('../models');
+const { User, Product, Order, Coupon, Category } = require('../models');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
 const { Op } = require('sequelize');
@@ -130,6 +130,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
       include: [
         {
           model: User,
+          as: 'user',
           attributes: ['id', 'name', 'email'],
         },
       ],
@@ -156,25 +157,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
-// ─── Landing Page Config ─────────────────────────────
-exports.getLandingConfig = catchAsync(async (req, res) => {
-  let config = await LandingConfig.findOne();
-  if (!config) {
-    config = await LandingConfig.create({});
-  }
-  res.status(200).json({ status: 'success', data: config });
-});
 
-exports.updateLandingConfig = catchAsync(async (req, res) => {
-  const { sections } = req.body;
-  let config = await LandingConfig.findOne();
-  if (!config) {
-    config = await LandingConfig.create({ sections, updatedBy: req.user.id });
-  } else {
-    await config.update({ sections, updatedBy: req.user.id });
-  }
-  res.status(200).json({ status: 'success', data: config });
-});
 
 // ─── Admin Orders ────────────────────────────────────
 exports.getAllOrders = catchAsync(async (req, res) => {

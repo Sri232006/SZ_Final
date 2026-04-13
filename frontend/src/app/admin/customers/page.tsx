@@ -19,8 +19,11 @@ export default function AdminCustomers() {
         const { data } = await adminAPI.getUsers();
         const payload = data.data;
         setUsers(payload?.users || (Array.isArray(payload) ? payload : []));
-      } catch { /* ignore */ }
-      setLoading(false);
+      } catch { 
+        toast.error('Failed to load customers');
+      } finally {
+        setLoading(false);
+      }
     }
     fetch();
   }, []);
@@ -74,12 +77,12 @@ export default function AdminCustomers() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-bold shrink-0">{user.name?.charAt(0)?.toUpperCase() || '?'}</div>
-                      <div><p className="text-white/80">{user.name}</p>{user.isActive === false && <span className="text-[9px] text-red-400">Deactivated</span>}</div>
+                      <div><p className="text-white/80">{user.name}</p>{user.isActive === false && <span className="text-[14px] font-medium text-red-400">Deactivated</span>}</div>
                     </div>
                   </td>
                   <td className="p-4 text-white/40 hidden md:table-cell">{user.email}</td>
                   <td className="p-4 hidden sm:table-cell">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${user.role === 'admin' ? 'bg-accent/10 text-accent' : 'bg-white/5 text-white/40'}`}>{user.role}</span>
+                    <span className={`px-3 py-1.5 rounded-full text-[14px] font-bold capitalize ${user.role === 'admin' ? 'bg-accent/10 text-accent' : 'bg-white/5 text-white/40'}`}>{user.role}</span>
                   </td>
                   <td className="p-4 text-white/30 hidden lg:table-cell">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="p-4 text-right">

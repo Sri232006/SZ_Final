@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Search, Package } from 'lucide-react';
+import { PlusCircle, PenLine, Trash2, Search, Package } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { productAPI, adminAPI } from '@/lib/api';
@@ -15,6 +15,7 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<any>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -24,8 +25,11 @@ export default function AdminProducts() {
     try {
       const { data } = await productAPI.getAll();
       setProducts(data.data?.products || []);
-    } catch { /* ignore */ }
-    setLoading(false);
+    } catch { 
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -43,8 +47,8 @@ export default function AdminProducts() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-white">Products</h1>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-all glow-red-hover">
-          <Plus className="w-4 h-4" /> Add Product
+        <button onClick={() => { setEditProduct(null); setIsModalOpen(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-all glow-red-hover">
+          <PlusCircle className="w-4 h-4" /> Add Product
         </button>
       </div>
 
@@ -85,13 +89,13 @@ export default function AdminProducts() {
                       <span className={`text-sm ${product.stock > 10 ? 'text-emerald-400' : product.stock > 0 ? 'text-yellow-400' : 'text-red-400'}`}>{product.stock}</span>
                     </td>
                     <td className="p-4 hidden lg:table-cell">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${product.isActive !== false ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                      <span className={`px-3 py-1.5 rounded-full text-[14px] font-bold ${product.isActive !== false ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                         {product.isActive !== false ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 rounded-lg glass text-white/30 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => { setEditProduct(product); setIsModalOpen(true); }} className="p-2 rounded-lg glass text-white/30 hover:text-white transition-colors"><PenLine className="w-3.5 h-3.5" /></button>
                         <button onClick={() => handleDelete(product.id.toString())} className="p-2 rounded-lg glass text-white/30 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
@@ -108,6 +112,7 @@ export default function AdminProducts() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onSuccess={fetchProducts} 
+        initialData={editProduct}
       />
     </div>
   );

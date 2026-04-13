@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Package, ShoppingCart, Users, Tag, Sparkles, ChevronLeft, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, Tag, ChevronLeft, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
 const navItems = [
@@ -14,7 +14,6 @@ const navItems = [
   { href: '/admin/categories', label: 'Categories', icon: Tag },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/coupons', label: 'Coupons', icon: Tag },
-  { href: '/admin/landing', label: 'Landing Page', icon: Sparkles },
   { href: '/admin/settings', label: 'Account Settings', icon: Settings },
 ];
 

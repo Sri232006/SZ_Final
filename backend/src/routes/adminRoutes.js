@@ -12,9 +12,7 @@ router.patch('/users/:id', adminController.updateUser);
 router.post('/users/:id/promote', adminController.promoteToAdmin);
 router.post('/users/:id/deactivate', adminController.deactivateUser);
 
-// Landing Page Config
-router.get('/landing-config', adminController.getLandingConfig);
-router.put('/landing-config', adminController.updateLandingConfig);
+
 
 // Orders management
 router.get('/orders', adminController.getAllOrders);

@@ -344,15 +344,10 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [configRes, productsRes, categoriesRes] = await Promise.allSettled([
-          configAPI.getLanding(),
+        const [productsRes, categoriesRes] = await Promise.allSettled([
           productAPI.getFeatured(),
           configAPI.getCategories(),
         ]);
-        if (configRes.status === 'fulfilled') {
-          const raw = configRes.value.data?.data?.sections;
-          setSections(Array.isArray(raw) ? raw : []);
-        }
         if (productsRes.status === 'fulfilled') {
           setProducts(productsRes.value.data?.data || []);
         }

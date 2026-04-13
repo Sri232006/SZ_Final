@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Clock, Truck, CheckCircle2, XCircle, Package, Calendar, Save, CalendarCheck, AlertCircle } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, Clock, Truck, CheckCircle2, XCircle, Package, Calendar, Save, CalendarCheck, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI } from '@/lib/api';
 
@@ -27,6 +27,13 @@ const statusIcons: Record<string, any> = {
   cancelled: XCircle,
 };
 
+const mapStatusToLabel = (status: string) => {
+  if (status === 'pending') return 'Ordered';
+  if (status === 'confirmed') return 'Ordered (Confirmed)';
+  if (status === 'processing') return 'Out for Delivery';
+  return status;
+};
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,13 +54,17 @@ export default function AdminOrders() {
       
       const initialDates: Record<string, string> = {};
       ordersList.forEach((order: any) => {
-        if (order.deliveryDate) {
-          initialDates[order.id] = order.deliveryDate.split('T')[0];
+        const dDate = order.deliveryDate || order.estimatedDelivery;
+        if (dDate) {
+          initialDates[order.id] = dDate.split('T')[0];
         }
       });
       setDeliveryDates(initialDates);
-    } catch { /* ignore */ }
-    setLoading(false);
+    } catch { 
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -79,7 +90,7 @@ export default function AdminOrders() {
     try {
       await adminAPI.updateOrderDeliveryDate(orderId, { deliveryDate });
       setOrders(orders.map((o) => 
-        o.id.toString() === orderId ? { ...o, deliveryDate } : o
+        o.id.toString() === orderId ? { ...o, estimatedDelivery: deliveryDate, deliveryDate } : o
       ));
       toast.success('Delivery date updated');
     } catch (err: any) {
@@ -141,7 +152,7 @@ export default function AdminOrders() {
               const Icon = statusIcons[s];
               return <Icon className="w-3 h-3" />;
             })()}
-            {s}
+            {s !== 'all' ? mapStatusToLabel(s) : s}
           </button>
         ))}
       </div>
@@ -165,7 +176,14 @@ export default function AdminOrders() {
               <tbody>
                 {filtered.map((order) => {
                   const StatusIcon = statusIcons[order.status] || Package;
-                  const deliveryStatus = getDeliveryStatus(order.deliveryDate);
+                  let dateToCheck = order.deliveryDate || order.estimatedDelivery;
+                  if (!dateToCheck && order.createdAt) {
+                    const fallbackDate = new Date(order.createdAt);
+                    fallbackDate.setDate(fallbackDate.getDate() + 7);
+                    dateToCheck = fallbackDate.toISOString();
+                  }
+                  
+                  const deliveryStatus = getDeliveryStatus(dateToCheck);
                   const DeliveryIcon = deliveryStatus?.icon || Calendar;
                   
                   return (
@@ -190,10 +208,10 @@ export default function AdminOrders() {
                           <select 
                             value={order.status} 
                             onChange={(e) => handleStatusChange(order.id.toString(), e.target.value)}
-                            className={`appearance-none px-2 py-1 rounded-lg text-[10px] font-bold border-0 outline-none cursor-pointer ${statusColors[order.status] || 'text-white/50'} bg-transparent`}
+                            className={`appearance-none px-3 py-1.5 rounded-lg text-[14px] font-bold border-0 outline-none cursor-pointer ${statusColors[order.status] || 'text-white/50'} bg-transparent`}
                           >
                             {statusOptions.map((s) => (
-                              <option key={s} value={s} className="bg-surface text-white capitalize">{s}</option>
+                              <option key={s} value={s} className="bg-surface text-white capitalize">{mapStatusToLabel(s)}</option>
                             ))}
                           </select>
                         </div>
@@ -205,7 +223,7 @@ export default function AdminOrders() {
                               <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
                               <input
                                 type="date"
-                                value={deliveryDates[order.id] || order.deliveryDate?.split('T')[0] || ''}
+                                value={deliveryDates[order.id] || (dateToCheck ? dateToCheck.split('T')[0] : '')}
                                 onChange={(e) => handleDeliveryDateChange(order.id.toString(), e.target.value)}
                                 min={getMinDate()}
                                 max={getMaxDate()}
@@ -226,11 +244,11 @@ export default function AdminOrders() {
                               )}
                             </button>
                           </div>
-                          {order.deliveryDate && (
+                          {dateToCheck && (
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <DeliveryIcon className={`w-3 h-3 ${deliveryStatus?.color || 'text-emerald-400'}`} />
-                              <p className={`text-[10px] ${deliveryStatus?.color || 'text-emerald-400/70'}`}>
-                                {formatDisplayDate(order.deliveryDate)}
+                              <p className={`text-[14px] font-medium ${deliveryStatus?.color || 'text-emerald-400/70'}`}>
+                                {formatDisplayDate(dateToCheck)}
                                 {deliveryStatus && ` • ${deliveryStatus.text}`}
                               </p>
                             </div>
@@ -250,7 +268,7 @@ export default function AdminOrders() {
           </div>
           {filtered.length === 0 && (
             <div className="p-8 text-center text-white/20">
-              <ShoppingCart className="w-8 h-8 mx-auto mb-2" />
+              <ShoppingBag className="w-8 h-8 mx-auto mb-2" />
               <p>No orders found</p>
             </div>
           )}
